@@ -5,11 +5,61 @@
 #include <sstream>
 #include <cmath>
 #include <limits>
+#include <cstdlib>
+#include <ctime>
 
 using namespace std;
 
+void generujMiasta(int liczbaMiast, const string& nazwaPliku) {
+    ofstream plikWyjsciowy(nazwaPliku);
+
+    if (!plikWyjsciowy.is_open()) {
+        cout << "Blad tworzenia pliku!" << endl;
+        return;
+    }
+
+    srand(time(0));
+
+    plikWyjsciowy << liczbaMiast << endl;
+
+    for (int i = 1; i <= liczbaMiast; i++) {
+        int x = rand() % 2000 + 1;
+        int y = rand() % 2500 + 1;
+        plikWyjsciowy << i << " " << x << " " << y << endl;
+    }
+
+    plikWyjsciowy.close();
+    cout << "Wygenerowano " << liczbaMiast << " miast i zapisano do pliku " << nazwaPliku << endl;
+}
+
 int main() {
-    ifstream strumienPlikuWejsciowego("bayg29.txt");
+    cout << "=== PROBLEM KOMIWOJAZERA ===" << endl << endl;
+    cout << "Wybierz opcje:" << endl;
+    cout << "1. Wygeneruj nowe dane" << endl;
+    cout << "2. Uzyj istniejacych danych z pliku test.txt" << endl;
+    cout << "Wybor: ";
+
+    int wybor;
+    cin >> wybor;
+
+    string nazwaPliku;
+
+    if (wybor == 1) {
+        int liczbaMiastDoWygenerowania;
+        cout << "Podaj liczbe miast do wygenerowania: ";
+        cin >> liczbaMiastDoWygenerowania;
+
+        nazwaPliku = "generator.txt";
+        generujMiasta(liczbaMiastDoWygenerowania, nazwaPliku);
+        cout << endl;
+    } else if (wybor == 2) {
+        nazwaPliku = "test.txt";
+    } else {
+        cout << "Nieprawidlowy wybor!" << endl;
+        return 1;
+    }
+
+    ifstream strumienPlikuWejsciowego(nazwaPliku);
 
     if (!strumienPlikuWejsciowego.is_open()) {
         cout << "Blad otwarcia pliku!" << endl;
