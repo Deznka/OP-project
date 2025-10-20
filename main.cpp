@@ -53,6 +53,7 @@ int main() {
         generujMiasta(liczbaMiastDoWygenerowania, nazwaPliku);
         cout << endl;
     } else if (wybor == 2) {
+        // TODO: Do podmiany nazwa
         nazwaPliku = "test.txt";
     } else {
         cout << "Nieprawidlowy wybor!" << endl;
@@ -72,13 +73,13 @@ int main() {
     string liniaTekstu;
     getline(strumienPlikuWejsciowego, liniaTekstu);
 
-    vector<pair<int, int>> punktyMiast(liczbaMiast + 1);
+    vector<pair<double, double>> punktyMiast(liczbaMiast + 1);
 
     while (getline(strumienPlikuWejsciowego, liniaTekstu)) {
         stringstream strumienLinii(liniaTekstu);
         int identyfikator;
-        int wspolrzednaX;
-        int wspolrzednaY;
+        double wspolrzednaX;
+        double wspolrzednaY;
         if (strumienLinii >> identyfikator >> wspolrzednaX >> wspolrzednaY) {
             punktyMiast[identyfikator] = {wspolrzednaX, wspolrzednaY};
         }
@@ -86,35 +87,35 @@ int main() {
 
     strumienPlikuWejsciowego.close();
 
-    vector<vector<int>> macierzOdleglosci(liczbaMiast + 1, vector<int>(liczbaMiast + 1, 0));
+    vector<vector<double>> macierzOdleglosci(liczbaMiast + 1, vector<double>(liczbaMiast + 1, 0));
 
     for (int i = 1; i <= liczbaMiast; i++) {
         for (int j = 1; j <= liczbaMiast; j++) {
             if (i != j) {
-                int x1 = punktyMiast[i].first;
-                int y1 = punktyMiast[i].second;
-                int x2 = punktyMiast[j].first;
-                int y2 = punktyMiast[j].second;
+                double x1 = punktyMiast[i].first;
+                double y1 = punktyMiast[i].second;
+                double x2 = punktyMiast[j].first;
+                double y2 = punktyMiast[j].second;
                 double odleglosc = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-                macierzOdleglosci[i][j] = round(odleglosc);
+                macierzOdleglosci[i][j] = odleglosc;
             }
         }
     }
 
     int miastoStartowe = 1;
     vector<bool> miastaOdwiedzone(liczbaMiast + 1, false);
-    vector<int> trasaPodrozy;
+    vector<double> trasaPodrozy;
     trasaPodrozy.push_back(miastoStartowe);
     miastaOdwiedzone[miastoStartowe] = true;
     int aktualneMiasto = miastoStartowe;
 
     for (int i = 0; i < liczbaMiast - 1; i++) {
         int najlepszeMiasto = -1;
-        int najmniejszaOdleglosc = numeric_limits<int>::max();
+        double najmniejszaOdleglosc = numeric_limits<double>::max();
 
         for (int kandydat = 1; kandydat <= liczbaMiast; kandydat++) {
             if (!miastaOdwiedzone[kandydat]) {
-                int odleglosc = macierzOdleglosci[aktualneMiasto][kandydat];
+                double odleglosc = macierzOdleglosci[aktualneMiasto][kandydat];
                 if (odleglosc < najmniejszaOdleglosc ||
                     (odleglosc == najmniejszaOdleglosc && (najlepszeMiasto == -1 || kandydat < najlepszeMiasto))) {
                     najmniejszaOdleglosc = odleglosc;
@@ -128,7 +129,7 @@ int main() {
         aktualneMiasto = najlepszeMiasto;
     }
 
-    int kosztTrasy = 0;
+    double kosztTrasy = 0;
 
     for (size_t i = 0; i < trasaPodrozy.size() - 1; i++) {
         kosztTrasy += macierzOdleglosci[trasaPodrozy[i]][trasaPodrozy[i + 1]];
