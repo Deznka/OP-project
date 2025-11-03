@@ -1,0 +1,42 @@
+- genetyczna:
+    - wybiera najlepsze rozwiazania z populacji (populacja zawsze ma miec tyle członków, ile na początku)
+    - gdy się "zatnie" to uzyj mutacji, ktora "psuje" rozwiazanie
+    cykle:
+      - selekcja: wybierz najlepsze rozwiazania
+      - krzyzowanie: tworz nowe rozwiazania z wybranych
+      - algorytm zachłanny
+      - mutacja: wprowadza losowe zmiany w nowych rozwiazaniach (co kilka petli)
+      - algorytm zachłanny (ocena nowych rozwiazan)
+      - ocena: ocen nowe rozwiazania i zaktualizuj populacje
+
+    Wady i zalety:
+        zalety:
+            - proste w implementacji
+            -
+        wady:
+            - moze byc wolny w porownaniu do innych metod przy duzej populacji (bo z każdą iteracją podwaja się populacja, którą trzeba ocenić)
+            -
+
+    Mutacja to po prostu losowa zmiana w rozwiazaniu (np. zamiana dwóch miast w problemie komiwojażera)
+    W problemie komiwojażera nie trzeba używać algorytmu zachłannego do oceny nowych rozwiązań, wystarczy obliczyć długość trasy
+    Generowanie osobników (populacji) za pomocą algorytmu zachłannego:
+        - start z różnych miast (w celu generowania tylu osobników ile jest miast)
+        -
+
+- tabu search:
+    - losowe rozwiązanie na start lub wygenerowane algorytmem zachłannym
+    - wprowadzanie zmian w rozwiązaniu; sprawdzamy ile jest konfliktów i wybieramy ten z najmniejszą liczbą konfliktów
+    - zakazane rozwiązania (tabu list) - rozwiązania zawierające skrzyżowania
+
+- mrówkowy:
+    - umieszczamy mrówkę w dowolnym mieście
+    - mrówka wybiera następne miasto na podstawie feromonów (które na początku są losowane)
+        - długość krawędzi (im krótsza krawędź, tym większa szansa na wybór!)
+        - dla mrówki najważniejsza jest ostatnia liczba - najatrakcyjniejsza krawędź
+        - losuje między atrakcyjnością a feromonami, jeśli są równe, to losuje 50/50
+    - po przejściu całej trasy, mrówka zostawia feromony na odwiedzonych krawędziach (im krótsza trasa, tym więcej feromonów)
+
+
+Dla komiwojażera:
+- Najlepsze rozwiązanie: mrówkowy
+- Najszybsze rozwiązanie: tabu search (łatwiejsza implementacja)
