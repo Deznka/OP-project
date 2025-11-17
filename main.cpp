@@ -8,8 +8,26 @@
 #include <cstdlib>
 #include <ctime>
 
+// Szkielet metaheurystyki
+// oddalić sie od algorytmu zachalnnego
+
+// jak iteracja powtarza wynik to mozna stopowac;
+// przerwac gdy nie ma poprawy od X iteracji (nawet przy psuciu wyniku)
+// lub przerwac po X czasu - jesli iteracja trwa za długo
+
+// zoptymalizować żeby krócej szukało
+// można wygenerować obraz grafu
+
+// na zaliczeniu:
+// na każdą instancje 3 minuty max
+// wyniki mają być powtarzalne, nie że raz sie pojawi i więcej nie - wtedy tego wyniku nie uznajemy
+//
+
 using namespace std;
 
+// ---------------------------------------------------
+// GENERATOR DANYCH
+// ---------------------------------------------------
 void generujMiasta(int liczbaMiast, const string& nazwaPliku) {
     ofstream plikWyjsciowy(nazwaPliku);
 
@@ -32,6 +50,157 @@ void generujMiasta(int liczbaMiast, const string& nazwaPliku) {
     cout << "Wygenerowano " << liczbaMiast << " miast i zapisano do pliku " << nazwaPliku << endl;
 }
 
+// ---------------------------------------------------
+// FUNKCJA LICZĄCA KOSZT TRASY
+// ---------------------------------------------------
+double policzKosztTrasy(const vector<int>& trasa, const vector<vector<double>>& D) {
+    double koszt = 0.0;
+    for (size_t i = 0; i < trasa.size() - 1; i++) {
+        koszt += D[trasa[i]][trasa[i + 1]];
+    }
+    koszt += D[trasa.back()][trasa.front()]; // powrót do startu
+    return koszt;
+}
+
+// ---------------------------------------------------
+// ALGORYTM MRÓWKOWY (ACO)
+// ---------------------------------------------------
+void ACO(const vector<vector<double>>& D, int n) {
+
+    cout << "\n=== ALGORYTM MRÓWKOWY (ACO) ===\n";
+
+    srand(time(0));
+
+    // PARAMETRY
+    int liczbaMrowek = n;
+    int iteracje = 50;
+    double alfa = 1.0; // wpływ feromonów
+    double beta = 5.0; // wpływ atrakcyjności krawędzi
+    double rho = 0.3;  // współczynnik parowania feromonów
+    double Q = 100.0;
+
+    // FEROMONY (początkowo 1.0)
+    vector<vector<double>> feromony(n + 1, vector<double>(n + 1, 1.0));
+
+    // ATRAKCYJNOŚĆ = odwrotność odległości
+    vector<vector<double>> atrakcyjnosc(n + 1, vector<double>(n + 1, 0.0));
+    for (int i = 1; i <= n; i++)
+        for (int j = 1; j <= n; j++)
+            if (i != j) atrakcyjnosc[i][j] = 1.0 / (D[i][j] + 0.0001);
+
+    vector<int> najlepszaTrasa;
+    double najlepszyKoszt = numeric_limits<double>::infinity();
+
+    // -------------------------------------
+    // GŁÓWNA PĘTLA ACO
+    // -------------------------------------
+    for (int iter = 0; iter < iteracje; iter++) {
+
+        vector<vector<int>> trasy(liczbaMrowek);
+        vector<double> koszty(liczbaMrowek);
+
+        // -------------------------------------
+        // KAŻDA MRÓWKA BUDUJE TRASĘ
+        // -------------------------------------
+        for (int m = 0; m < liczbaMrowek; m++) {
+
+            int start = (m % n) + 1;
+            vector<int> trasa;
+            vector<bool> odwiedzony(n + 1, false);
+
+            trasa.push_back(start);
+            odwiedzony[start] = true;
+            int aktualne = start;
+
+            // budowanie ścieżki
+            for (int k = 1; k < n; k++) {
+
+                vector<double> P(n + 1, 0.0);
+                double suma = 0.0;
+
+                // liczymy prawdopodobieństwa
+                for (int j = 1; j <= n; j++) {
+                    if (!odwiedzony[j]) {
+                        double tau = pow(feromony[aktualne][j], alfa);
+                        double eta = pow(atrakcyjnosc[aktualne][j], beta);
+                        P[j] = tau * eta;
+                        suma += P[j];
+                    }
+                }
+
+                // losowanie następnego miasta
+                double los = ((double)rand() / RAND_MAX) * suma;
+                double akum = 0.0;
+                int wybrane = -1;
+
+                for (int j = 1; j <= n; j++) {
+                    if (!odwiedzony[j]) {
+                        akum += P[j];
+                        if (akum >= los) {
+                            wybrane = j;
+                            break;
+                        }
+                    }
+                }
+
+                if (wybrane == -1)
+                    for (int j = 1; j <= n; j++)
+                        if (!odwiedzony[j]) { wybrane = j; break; }
+
+                trasa.push_back(wybrane);
+                odwiedzony[wybrane] = true;
+                aktualne = wybrane;
+            }
+
+            double koszt = policzKosztTrasy(trasa, D);
+            trasy[m] = trasa;
+            koszty[m] = koszt;
+
+            if (koszt < najlepszyKoszt) {
+                najlepszyKoszt = koszt;
+                najlepszaTrasa = trasa;
+            }
+        }
+
+        // -------------------------------------
+        // PAROWANIE FEROMONÓW
+        // -------------------------------------
+        for (int i = 1; i <= n; i++)
+            for (int j = 1; j <= n; j++)
+                feromony[i][j] *= (1.0 - rho);
+
+        // -------------------------------------
+        // AKTUALIZACJA FEROMONÓW (WZMACNIANIE)
+        // -------------------------------------
+        for (int m = 0; m < liczbaMrowek; m++) {
+            double delta = Q / koszty[m];
+            const auto& trasa = trasy[m];
+
+            for (int i = 0; i < n - 1; i++) {
+                int a = trasa[i];
+                int b = trasa[i + 1];
+                feromony[a][b] += delta;
+                feromony[b][a] += delta;
+            }
+            feromony[trasa.back()][trasa.front()] += delta;
+            feromony[trasa.front()][trasa.back()] += delta;
+        }
+
+        cout << "Iteracja " << iter + 1 << " | Najlepszy koszt: " << najlepszyKoszt << endl;
+    }
+
+    // -------------------------------------
+    // WYNIK
+    // -------------------------------------
+    cout << "\n=== WYNIK ACO ===\nNajlepsza trasa: ";
+    for (int x : najlepszaTrasa) cout << x << " ";
+    cout << najlepszaTrasa.front();
+    cout << "\nKoszt: " << najlepszyKoszt << "\n\n";
+}
+
+// ---------------------------------------------------
+// GŁÓWNY MAIN (z Twoim kodem + mrówkowy ACO)
+// ---------------------------------------------------
 int main() {
     cout << "=== PROBLEM KOMIWOJAZERA ===" << endl << endl;
     cout << "Wybierz opcje:" << endl;
@@ -46,108 +215,61 @@ int main() {
 
     if (wybor == 1) {
         int liczbaMiastDoWygenerowania;
-        cout << "Podaj liczbe miast do wygenerowania: ";
+        cout << "Podaj liczbe miast: ";
         cin >> liczbaMiastDoWygenerowania;
 
         nazwaPliku = "generator.txt";
         generujMiasta(liczbaMiastDoWygenerowania, nazwaPliku);
         cout << endl;
-    } else if (wybor == 2) {
-        // TODO: Do podmiany nazwa
-        nazwaPliku = "test.txt";
-    } else {
+    }
+    else if (wybor == 2) {
+        nazwaPliku = "bier127.txt";
+    }
+    else {
         cout << "Nieprawidlowy wybor!" << endl;
         return 1;
     }
 
-    ifstream strumienPlikuWejsciowego(nazwaPliku);
-
-    if (!strumienPlikuWejsciowego.is_open()) {
+    // -------------------------------------
+    // WCZYTYWANIE DANYCH
+    // -------------------------------------
+    ifstream plik(nazwaPliku);
+    if (!plik.is_open()) {
         cout << "Blad otwarcia pliku!" << endl;
         return 1;
     }
 
-    int liczbaMiast = 0;
-    strumienPlikuWejsciowego >> liczbaMiast;
+    int n;
+    plik >> n;
 
-    string liniaTekstu;
-    getline(strumienPlikuWejsciowego, liniaTekstu);
+    string linia;
+    getline(plik, linia);
 
-    vector<pair<double, double>> punktyMiast(liczbaMiast + 1);
+    vector<pair<double, double>> punkty(n + 1);
 
-    while (getline(strumienPlikuWejsciowego, liniaTekstu)) {
-        stringstream strumienLinii(liniaTekstu);
-        int identyfikator;
-        double wspolrzednaX;
-        double wspolrzednaY;
-        if (strumienLinii >> identyfikator >> wspolrzednaX >> wspolrzednaY) {
-            punktyMiast[identyfikator] = {wspolrzednaX, wspolrzednaY};
-        }
+    while (getline(plik, linia)) {
+        stringstream s(linia);
+        int id; double x, y;
+        if (s >> id >> x >> y)
+            punkty[id] = {x, y};
     }
 
-    strumienPlikuWejsciowego.close();
+    plik.close();
 
-    vector<vector<double>> macierzOdleglosci(liczbaMiast + 1, vector<double>(liczbaMiast + 1, 0));
+    // -------------------------------------
+    // MACIERZ ODLEGŁOŚCI
+    // -------------------------------------
+    vector<vector<double>> D(n + 1, vector<double>(n + 1, 0));
+    for (int i = 1; i <= n; i++)
+        for (int j = 1; j <= n; j++)
+            if (i != j)
+                D[i][j] = sqrt(pow(punkty[i].first - punkty[j].first, 2) +
+                               pow(punkty[i].second - punkty[j].second, 2));
 
-    for (int i = 1; i <= liczbaMiast; i++) {
-        for (int j = 1; j <= liczbaMiast; j++) {
-            if (i != j) {
-                double x1 = punktyMiast[i].first;
-                double y1 = punktyMiast[i].second;
-                double x2 = punktyMiast[j].first;
-                double y2 = punktyMiast[j].second;
-                double odleglosc = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-                macierzOdleglosci[i][j] = odleglosc;
-            }
-        }
-    }
-
-    int miastoStartowe = 1;
-    vector<bool> miastaOdwiedzone(liczbaMiast + 1, false);
-    vector<double> trasaPodrozy;
-    trasaPodrozy.push_back(miastoStartowe);
-    miastaOdwiedzone[miastoStartowe] = true;
-    int aktualneMiasto = miastoStartowe;
-
-    for (int i = 0; i < liczbaMiast - 1; i++) {
-        int najlepszeMiasto = -1;
-        double najmniejszaOdleglosc = numeric_limits<double>::max();
-
-        for (int kandydat = 1; kandydat <= liczbaMiast; kandydat++) {
-            if (!miastaOdwiedzone[kandydat]) {
-                double odleglosc = macierzOdleglosci[aktualneMiasto][kandydat];
-                if (odleglosc < najmniejszaOdleglosc ||
-                    (odleglosc == najmniejszaOdleglosc && (najlepszeMiasto == -1 || kandydat < najlepszeMiasto))) {
-                    najmniejszaOdleglosc = odleglosc;
-                    najlepszeMiasto = kandydat;
-                }
-            }
-        }
-
-        trasaPodrozy.push_back(najlepszeMiasto);
-        miastaOdwiedzone[najlepszeMiasto] = true;
-        aktualneMiasto = najlepszeMiasto;
-    }
-
-    double kosztTrasy = 0;
-
-    for (size_t i = 0; i < trasaPodrozy.size() - 1; i++) {
-        kosztTrasy += macierzOdleglosci[trasaPodrozy[i]][trasaPodrozy[i + 1]];
-    }
-
-    kosztTrasy += macierzOdleglosci[trasaPodrozy.back()][trasaPodrozy.front()];
-
-    cout << "Liczba miast: " << liczbaMiast << endl << endl;
-    cout << "Algorytm: Nearest Neighbor (zachlanny), start = 1" << endl;
-    cout << "Trasa: ";
-    for (size_t i = 0; i < trasaPodrozy.size(); i++) {
-        cout << trasaPodrozy[i];
-        if (i + 1 < trasaPodrozy.size()) {
-            cout << " ";
-        }
-    }
-    cout << endl;
-    cout << "Koszt (z powrotem do startu): " << kosztTrasy << endl;
+    // -------------------------------------
+    // URUCHOM MRÓWKOWY ACO
+    // -------------------------------------
+    ACO(D, n);
 
     return 0;
 }
